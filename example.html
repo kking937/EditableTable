@@ -11,10 +11,11 @@
 			
 			let options = 
 			{
-				headers : [["name", "string"],["id","int"], ["birthday","date"]],
+				headers : [["name", "string"],["id","int"], ["birthday","date"],["married","bool"]],
 			  	id : "table-container",
+
 			}
-			let data = [["bob", 2,"1990-03-12"],["joe",4,"1/12/2000"],["billy", 23, "1800-2-11"],["frank", 24, "12/23/1950"]]
+			let data = [["bob", 2,"1990-03-12","true"],["joe",4,"1/12/2000","false"],["billy", 23, "1800-2-11","false"],["frank", 24, "12/23/1950","true"]]
 			var table = new EditableTable(options);
 			table.make(data)
 		</script>

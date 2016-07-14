@@ -5,7 +5,8 @@ function EditableTable(opts)
             tabToMove       : true,
             arrowsToMove    : true,
             saveOnLooseFocus: false,
-            standardDates     : true,
+            standardDates   : true,
+            checkBoxBools   : true,
             id              : "EditableTable",
             headers         : [["name","dataType"]]
 
@@ -42,7 +43,24 @@ function EditableTable(opts)
                 {
                     cellData = formatDate(cellData);
                 }
-                let cell = $('<td id="cell'+row+'-'+col+'">').text(cellData);
+               let cell;
+                if (options["headers"][col][1] == "bool" && options["checkBoxBools"]) 
+                {
+                    if (cellData == "true") 
+                    {
+                        cell = $('<td id="cell'+row+'-'+col+'">').append($('<input type="checkbox" value="" checked>'))
+                    }
+                    else
+                    {
+                        cell = $('<td id="cell'+row+'-'+col+'">').append($('<input type="checkbox" value="" >'))
+
+                    }
+                }
+                else
+                {
+                    cell = $('<td id="cell'+row+'-'+col+'">').text(cellData);
+
+                }
                 validate(cell);
                 trow.append(cell);
             }
@@ -78,7 +96,20 @@ function EditableTable(opts)
     {
         if($(elem)[0] == $('.activeCell')[0])return
         ost.saveCurrentCell();
-        $(elem).addClass('activeCell col-xs-2').html('<input type="text" id="in" class="editCell form-control col-xs-2" value="' + $(elem).text() + '" placeholder="' + $(elem).text() + '" title="Enter to save" tabindex="-1"/>');
+        $(elem).addClass('activeCell col-xs-2');
+        let active = $(options["jid"] + '.activeCell');
+        let id = active.attr('id').substring(4).split('-');
+       
+        if (options["headers"][id[1]][1] == "bool" && options["checkBoxBools"]) 
+        {
+            
+           let checkbox =  $(elem).find('input')[0];
+           $(checkbox).addClass("editCell")
+        }
+        else
+        {
+            $(elem).html('<input type="text" id="in" class="editCell form-control col-xs-2" value="' + $(elem).text() + '" placeholder="' + $(elem).text() + '" title="Enter to save" tabindex="-1"/>');
+        }
         $('.editCell').focus();
     }
 
@@ -86,35 +117,47 @@ function EditableTable(opts)
     {
         if($(options["jid"] + '.activeCell').length === 0)return;
         let active = $(options["jid"] + '.activeCell');
-        if($(options["jid"] + '.editCell').prop('placeholder') != $(options["jid"] + ' .editCell').val().trim())
-        {
-            undoStack.push({element: active.clone()
-                , undo: function(element) {
-                    let cell = element.prop('id');
-                    let text = $(element.children()[0]).prop('placeholder');
-                    $(options["jid"] + ' #'+cell).text(text).css('background-color','#999999').animate({backgroundColor: '#f5f5f5'}, function() {
-                        $(options["jid"] + ' #'+cell).css({'background-color':''});
-                        let id = cell.substring(4).split('-');
-                        validate(element);
-                        ost.validatTable();
-                    })
-                }
-                , redo: function(element) {
-                    let cell = element.prop('id');
-                    let text = $(element.children()[0]).val().trim();
-                    $(options["jid"] + ' #'+cell).text(text).css('background-color','#999999').animate({backgroundColor: '#f5f5f5'}, function() {
-                        $(options["jid"] + ' #'+cell).css({'background-color':''});
-                        let id = cell.substring(4).split('-');
-                        validate(element);
-                        ost.validatTable();
-                    })
-                }});
-            redoStack = []
-        }
         let id = active.prop('id').substring(4).split('-');
-        active.removeClass('activeCell col-xs-2').text($('.editCell').val().trim()).children().remove();
-        validate(active);
-        ost.validatTable();
+        if (options["headers"][id[1]][1] == "bool" && options["checkBoxBools"]) 
+        {
+            active.removeClass('activeCell col-xs-2');
+            let checkbox = active.find('input')[0]
+            $(checkbox).removeClass("editCell")
+             validate(active);
+            ost.validatTable();
+        }
+        else
+        {
+
+            if($(options["jid"] + '.editCell').prop('placeholder') != $(options["jid"] + ' .editCell').val().trim())
+            {
+                undoStack.push({element: active.clone()
+                    , undo: function(element) {
+                        let cell = element.prop('id');
+                        let text = $(element.children()[0]).prop('placeholder');
+                        $(options["jid"] + ' #'+cell).text(text).css('background-color','#999999').animate({backgroundColor: '#f5f5f5'}, function() {
+                            $(options["jid"] + ' #'+cell).css({'background-color':''});
+                            let id = cell.substring(4).split('-');
+                            validate(element);
+                            ost.validatTable();
+                        })
+                    }
+                    , redo: function(element) {
+                        let cell = element.prop('id');
+                        let text = $(element.children()[0]).val().trim();
+                        $(options["jid"] + ' #'+cell).text(text).css('background-color','#999999').animate({backgroundColor: '#f5f5f5'}, function() {
+                            $(options["jid"] + ' #'+cell).css({'background-color':''});
+                            let id = cell.substring(4).split('-');
+                            validate(element);
+                            ost.validatTable();
+                        })
+                    }});
+                redoStack = []
+            }
+            active.removeClass('activeCell col-xs-2').text($('.editCell').val().trim()).children().remove();
+            validate(active);
+            ost.validatTable();
+        }
     }
 
     this.deleteRow = function(elem)
@@ -287,11 +330,7 @@ function EditableTable(opts)
         let text = element.text().trim() || '';
         if(options["headers"][column][1] == "")
         {
-            try
-            {
-                element.text(formatDate(text));
-            }
-            catch(exception) { console.log(exception)}
+            element.text(formatDate(text));
         }
        /* if(!validation[column][0](text))
         {
@@ -302,20 +341,25 @@ function EditableTable(opts)
             element.removeClass('alert alert-danger invalidCell').removeAttr('title');
         }*/
     }
-    function formatDate(date){
-        date = new Date(date)
-        let day = date.getDate();
-        let month = date.getMonth() + 1;
-        let year = date.getFullYear();
-        if (month < 10) {
-            month = "0" + month;
+    function formatDate(date)
+    {
+        try
+        {
+            date = new Date(date)
+            let day = date.getDate();
+            let month = date.getMonth() + 1;
+            let year = date.getFullYear();
+            if (month < 10) {
+                month = "0" + month;
+            }
+            if (day < 10) {
+                day = "0" + day;
+            }
+            date = month +"/"+day+"/"+year;
+            
+            return date;
         }
-        if (day < 10) {
-            day = "0" + day;
-        }
-        date = month +"/"+day+"/"+year;
-        
-        return date;
+        catch(exception) { console.log(exception)}
     }
 
     this.validatTable = function()
