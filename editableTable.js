@@ -8,8 +8,7 @@ function EditableTable(opts)
             standardDates   : true,
             checkBoxBools   : true,
             id              : "EditableTable",
-            headers         : [["name","dataType"]]
-
+            headers         : [["name","dataType", true]], // [["name", "datatype", column editable?]]
         };
     let options = $.extend({}, defaults, opts);
 
@@ -230,7 +229,15 @@ function EditableTable(opts)
             id[1] = 0;
             id[0]++;
         }
-        ost.editCell($(options["jid"]+'#cell'+id[0]+'-'+id[1])[0]);
+        if (options["headers"][id[1]][2]) 
+        {
+            ost.editCell($(options["jid"]+'#cell'+id[0]+'-'+id[1])[0]);
+        }
+        else
+        {
+            ost.editCell($(options["jid"]+'#cell'+id[0]+'-'+id[1])[0]);
+            ost.tabCell();
+        }
     }
 
     this.moveCell = function(y,x)
@@ -245,7 +252,14 @@ function EditableTable(opts)
             id[0] = rows-Math.abs(id[0]);
         if(id[1] >= columns || id[1] < 0)
             id[1] = columns-Math.abs(id[1]);
-        ost.editCell($(options["jid"]+'#cell'+id[0]+'-'+id[1])[0]);
+        if (options["headers"][id[1]][2])
+        {
+            ost.editCell($(options["jid"]+'#cell'+id[0]+'-'+id[1])[0]);
+        }
+        else
+        {
+            ost.escapeCurrentCell();
+        }
     }
 
     this.undo = function()
@@ -287,7 +301,12 @@ function EditableTable(opts)
     })
 
     $(options["jid"]).on('click', 'td:not(.deleteRow)', function(event) {
-        ost.editCell(this);
+
+        let id = this.id.substring(4).split('-');
+        if (options["headers"][id[1]][2]) 
+        {
+            ost.editCell(this);
+        }
     })
 
     $(options["jid"]).on('blur', '.editCell', function(event) {
