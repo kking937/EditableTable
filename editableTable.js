@@ -5,6 +5,7 @@ function EditableTable(opts)
             tabToMove       : true,
             arrowsToMove    : true,
             saveOnLooseFocus: false,
+            standardDates     : true,
             id              : "EditableTable",
             headers         : [["name","dataType"]]
 
@@ -13,8 +14,7 @@ function EditableTable(opts)
 
     const KEYS = {ENTER:13, ESCAPE:27, TAB:9, UNDO:90, REDO:89, LEFT:37, UP:38, RIGHT:39, DOWN:40}
     let ost = this;
-    this.id = options["id"];
-    options["jid"] = '#' + this.id + ' ';
+    options["jid"] = '#' + options["id"]+ ' ';
     let columns = 0, rows = 0;
     let undoStack = [];
     let redoStack = [];
@@ -38,6 +38,10 @@ function EditableTable(opts)
                 let cellData = data[row][col];
                 if(typeof cellData === 'undefined' && cellData == null)
                     cellData = '';
+                if (options["headers"][col][1] == "date" && options["standardDates"]) 
+                {
+                    cellData = formatDate(cellData);
+                }
                 let cell = $('<td id="cell'+row+'-'+col+'">').text(cellData);
                 validate(cell);
                 trow.append(cell);
@@ -285,8 +289,7 @@ function EditableTable(opts)
         {
             try
             {
-                let date = new Date(text)
-                element.text(formatDate(date));
+                element.text(formatDate(text));
             }
             catch(exception) { console.log(exception)}
         }
@@ -300,9 +303,10 @@ function EditableTable(opts)
         }*/
     }
     function formatDate(date){
-        var day = date.getDate();
-        var month = date.getMonth() + 1;
-        var year = date.getFullYear();
+        date = new Date(date)
+        let day = date.getDate();
+        let month = date.getMonth() + 1;
+        let year = date.getFullYear();
         if (month < 10) {
             month = "0" + month;
         }
