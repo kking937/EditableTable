@@ -96,7 +96,7 @@ function EditableTable(opts)
     {
         if($(elem)[0] == $('.activeCell')[0])return
         ost.saveCurrentCell();
-        $(elem).addClass('activeCell col-xs-2');
+        $(elem).addClass('activeCell');
         let active = $(options["jid"] + '.activeCell');
         let id = active.attr('id').substring(4).split('-');
        
@@ -108,7 +108,9 @@ function EditableTable(opts)
         }
         else
         {
-            $(elem).html('<input type="text" id="in" class="editCell form-control col-xs-2" value="' + $(elem).text() + '" placeholder="' + $(elem).text() + '" title="Enter to save" tabindex="-1"/>');
+            let width = $(elem).width();
+            $(elem).html('<input type="text" id="in" class="editCell form-control col-xs-2"  style="width:'+$(elem).width()+'px"value="' + $(elem).text() + '" placeholder="' + $(elem).text() + '" title="Enter to save" tabindex="-1"/>');
+            $(elem).width(width);
         }
         $('.editCell').focus();
     }
@@ -120,10 +122,10 @@ function EditableTable(opts)
         let id = active.prop('id').substring(4).split('-');
         if (options["headers"][id[1]][1] == "bool" && options["checkBoxBools"]) 
         {
-            active.removeClass('activeCell col-xs-2');
+            active.removeClass('activeCell');
             let checkbox = active.find('input')[0]
             $(checkbox).removeClass("editCell")
-             validate(active);
+            validate(active);
             ost.validatTable();
         }
         else
