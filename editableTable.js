@@ -421,6 +421,11 @@ function EditableTable(opts)
         }
     })
 
+    this.delete = function()
+    {
+        $(options['jid']).unbind();
+    }
+
     function validate(element)
     {
         let column = parseInt(element.attr('id').substring(4).split('-')[1]);
