@@ -1,12 +1,13 @@
 function EditableTable(opts)
 {
-    var defaults = {
+    let defaults = {
             deleteRows      : true,
             tabToMove       : true,
             arrowsToMove    : true,
             saveOnLooseFocus: false,
             standardDates   : true,
             checkBoxBools   : true,
+            sortable        : true,
             id              : "EditableTable",
             headers         : [["name","dataType", true]], // [["name", "datatype", column editable?]]
             dropDowns       : {}
@@ -14,6 +15,7 @@ function EditableTable(opts)
     let options = $.extend({}, defaults, opts);
 
     const KEYS = {ENTER:13, ESCAPE:27, TAB:9, UNDO:90, REDO:89, LEFT:37, UP:38, RIGHT:39, DOWN:40}
+    let inverse = true;
     let ost = this;
     options["jid"] = '#' + options["id"]+ ' ';
     let columns = 0, rows = 0;
@@ -28,7 +30,12 @@ function EditableTable(opts)
         this.redoStack = [];
         $(options["jid"]+' table tbody').remove();
         let thead = $('<tr>');
-        options["headers"].forEach(function(value) {thead.append('<th>'+value[0]+'</th>')});
+        options["headers"].forEach(function(value) {
+            if(options["sortable"])
+                thead.append('<th style="cursor:pointer" title="Click to sort">'+value[0]+"&nbsp;<span class='glyphicon glyphicon-minus'></span></th>")
+            else
+                thead.append('<th>'+value[0]+'</th>')
+        });
         let tbody = $('<tbody>');
         for(let row=0; row<data.length;row++)
         {
@@ -38,14 +45,14 @@ function EditableTable(opts)
                 let cellData = data[row][col];
                 if(typeof cellData === 'undefined' && cellData == null)
                     cellData = '';
-                if (options["headers"][col][1] == "date" && options["standardDates"]) 
+                if (options["headers"][col][1] == "date" && options["standardDates"])
                 {
                     cellData = formatDate(cellData);
                 }
                let cell;
-                if (options["headers"][col][1] == "bool" && options["checkBoxBools"]) 
+                if (options["headers"][col][1] == "bool" && options["checkBoxBools"])
                 {
-                    if (cellData == "true") 
+                    if (cellData == "true")
                     {
                         cell = $('<td id="cell'+row+'-'+col+'">').append($('<input type="checkbox" value="" checked>'))
                     }
@@ -67,13 +74,13 @@ function EditableTable(opts)
                 validate(cell);
                 trow.append(cell);
             }
-            if (options["deleteRows"]) 
+            if (options["deleteRows"])
             {
                 let deleteCell = $('<td class="deleteRow" id="row' + row + '"><div class="close">&times;</div></td></tr>');
                 trow.append(deleteCell);
             }
             tbody.append(trow);
-            
+
         }
         thead = $('<thead class="default-color">').append(thead);
         let table = $('<table class="table table-condensed table-striped">').append(thead).append(tbody);
@@ -102,22 +109,22 @@ function EditableTable(opts)
         $(elem).addClass('activeCell');
         let active = $(options["jid"] + '.activeCell');
         let id = active.attr('id').substring(4).split('-');
-       
-        if (options["headers"][id[1]][1] == "bool" && options["checkBoxBools"]) 
+
+        if (options["headers"][id[1]][1] == "bool" && options["checkBoxBools"])
         {
-            
+
            let checkbox =  $(elem).find('input')[0];
            $(checkbox).addClass("editCell")
            $(checkbox).focus()
         }
-        else if (options["headers"][id[1]][1] == "dropdown") 
+        else if (options["headers"][id[1]][1] == "dropdown")
         {
             let width = $(elem).width();
             let current = $(elem).text();
             let dropDown = $('<select class="editCell form-control" value="" >');
             $.each(options["dropDowns"][options["headers"][id[1]][3]], function(index, value){
                 let opt = $('<option value="'+index+'">').text(value)
-                if (value === current) 
+                if (value === current)
                 {
                     opt.attr("selected","selected")
                 }
@@ -144,7 +151,7 @@ function EditableTable(opts)
         if($(options["jid"] + '.activeCell').length === 0)return;
         let active = $(options["jid"] + '.activeCell');
         let id = active.prop('id').substring(4).split('-');
-        if (options["headers"][id[1]][1] == "bool" && options["checkBoxBools"]) 
+        if (options["headers"][id[1]][1] == "bool" && options["checkBoxBools"])
         {
             active.removeClass('activeCell');
             let checkbox = active.find('input')[0];
@@ -259,10 +266,12 @@ function EditableTable(opts)
         ost.saveCurrentCell();
         if(++id[1] == columns)
         {
+            let next = active[0].parentElement.nextSibling;
+            if(next == null) next = $(options["jid"]+'tbody tr')[0];
             id[1] = 0;
-            id[0]++;
+            id[0] = parseInt(next.id.substring(8))
         }
-        if (options["headers"][id[1]][2]) 
+        if (options["headers"][id[1]][2])
         {
             ost.editCell($(options["jid"]+'#cell'+id[0]+'-'+id[1])[0]);
         }
@@ -279,12 +288,22 @@ function EditableTable(opts)
         let id = active.attr('id').substring(4).split('-');
         id.forEach(function(val,index) {id[index] = parseInt(val)});
         ost.saveCurrentCell();
-        id[0] += y;
         id[1] += x;
-        if(id[0] >= rows || id[0] < 0)
-            id[0] = rows-Math.abs(id[0]);
         if(id[1] >= columns || id[1] < 0)
             id[1] = columns-Math.abs(id[1]);
+
+        let next = active[0].parentElement;
+        if(y===1)
+        {
+            next = next.nextSibling;
+            if(next == null) next = $(options["jid"]+'tbody tr')[0];
+        }
+        else if(y===-1)
+        {
+             next = next.previousSibling;
+             if(next == null) next = $(options["jid"]+'tbody tr').last()[0];
+        }
+        id[0] = parseInt(next.id.substring(8))
         if (options["headers"][id[1]][2])
         {
             ost.editCell($(options["jid"]+'#cell'+id[0]+'-'+id[1])[0]);
@@ -326,8 +345,32 @@ function EditableTable(opts)
         return tempData;
     }
 
+    $(options["jid"]).on('click', 'th', function(event) {
+        if(!options["sortable"])return;
+        let thIndex = $(this).index();
+        $(options["jid"]).find('td').filter(function() {
+            return $(this).index() === thIndex;
+        }).sortElements(function(a,b) {
+            return $.text([a]) > $.text([b]) ? (inverse?-1:1) : (inverse?1:-1);
+        }, function() {
+            return this.parentNode;
+        })
+        $(options["jid"]).find('th').each(function(index, value) {
+            let elem = $($(value).children()[0]);
+            if((elem).hasClass('glyphicon-minus'))return;
+            $($(value).children()[0]).removeClass(function(index,css) {
+                return (css.match(/glyphicon-triangle[_a-zA-Z0-9-]*/g) || []).join(' ')
+            }).addClass('glyphicon-minus');
+        })
+        $($(this).children()[0]).removeClass(function(index,css) {
+            return (css.match(/glyphicon-triangle[_a-zA-Z0-9-]*/g) || []).join(' ')
+        }).removeClass('glyphicon-minus')
+        .addClass('glyphicon-triangle-'+(inverse?'bottom':'top'));
+        inverse = !inverse;
+    })
+
     $(options["jid"]).on('click', '.deleteRow', function(event) {
-        if (options["deleteRows"]) 
+        if (options["deleteRows"])
         {
             ost.deleteRow(this);
         }
@@ -336,7 +379,7 @@ function EditableTable(opts)
     $(options["jid"]).on('click', 'td:not(.deleteRow)', function(event) {
 
         let id = this.id.substring(4).split('-');
-        if (options["headers"][id[1]][2]) 
+        if (options["headers"][id[1]][2])
         {
             ost.editCell(this);
         }
@@ -410,7 +453,7 @@ function EditableTable(opts)
                 day = "0" + day;
             }
             date = month +"/"+day+"/"+year;
-            
+
             return date;
         }
         catch(exception) { console.log(exception)}
@@ -436,3 +479,31 @@ function EditableTable(opts)
         options["dropDowns"][name] = dropDown;
     }
 }
+
+jQuery.fn.sortElements = (function(){
+    let sort = [].sort;
+    return function(comparator, getSortable)
+    {
+        getSortable = getSortable || function(){return this;};
+        let placements = this.map(function()
+        {
+
+            let sortElement = getSortable.call(this),
+                parentNode = sortElement.parentNode,
+                nextSibling = parentNode.insertBefore(document.createTextNode(''),sortElement.nextSibling);
+
+            return function() {
+                if (parentNode === this)
+                {
+                    throw new Error("You can't sort elements if any one is a descendant of another.");
+                }
+
+                parentNode.insertBefore(this, nextSibling);
+                parentNode.removeChild(nextSibling);
+            };
+        });
+        return sort.call(this, comparator).each(function(i){
+            placements[i].call(getSortable.call(this));
+        });
+    };
+})();
