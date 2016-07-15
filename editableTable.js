@@ -9,6 +9,7 @@ function EditableTable(opts)
             checkBoxBools   : true,
             id              : "EditableTable",
             headers         : [["name","dataType", true]], // [["name", "datatype", column editable?]]
+            dropDowns       : {}
         };
     let options = $.extend({}, defaults, opts);
 
@@ -18,7 +19,6 @@ function EditableTable(opts)
     let columns = 0, rows = 0;
     let undoStack = [];
     let redoStack = [];
-    //this.validation = validation;
 
     this.make = function(data)
     {
@@ -54,6 +54,10 @@ function EditableTable(opts)
                         cell = $('<td id="cell'+row+'-'+col+'">').append($('<input type="checkbox" value="" >'))
 
                     }
+                }
+                else if (options["headers"][col][1] == "dropdown")
+                {
+                    cell = $('<td id="cell'+row+'-'+col+'">').text(options["dropDowns"][options["headers"][col][3]][cellData]);
                 }
                 else
                 {
@@ -104,12 +108,33 @@ function EditableTable(opts)
             
            let checkbox =  $(elem).find('input')[0];
            $(checkbox).addClass("editCell")
+           $(checkbox).focus()
+        }
+        else if (options["headers"][id[1]][1] == "dropdown") 
+        {
+            let width = $(elem).width();
+            let current = $(elem).text();
+            let dropDown = $('<select class="editCell form-control" value="" >');
+            $.each(options["dropDowns"][options["headers"][id[1]][3]], function(index, value){
+                let opt = $('<option value="'+index+'">').text(value)
+                if (value === current) 
+                {
+                    opt.attr("selected","selected")
+                }
+                dropDown.append(opt);
+            })
+            $(elem).text("");
+            $(elem).append(dropDown);
+            $(elem).width(width);
+
+            dropDown.focus()
         }
         else
         {
             let width = $(elem).width();
             $(elem).html('<input type="text" id="in" class="editCell form-control col-xs-2"  style="width:'+$(elem).width()+'px"value="' + $(elem).text() + '" placeholder="' + $(elem).text() + '" title="Enter to save" tabindex="-1"/>');
             $(elem).width(width);
+            $('.editCell').focus();
         }
         $('.editCell').focus();
     }
@@ -122,10 +147,18 @@ function EditableTable(opts)
         if (options["headers"][id[1]][1] == "bool" && options["checkBoxBools"]) 
         {
             active.removeClass('activeCell');
-            let checkbox = active.find('input')[0]
-            $(checkbox).removeClass("editCell")
+            let checkbox = active.find('input')[0];
+            $(checkbox).removeClass("editCell");
             validate(active);
             ost.validatTable();
+        }
+        else if (options["headers"][id[1]][1] == "dropdown")
+        {
+            active.removeClass('activeCell');
+            let dropDown =  active.find('select')[0];
+            let choice =  parseInt($(dropDown).val());
+            dropDown.remove();
+            active.text(options["dropDowns"][options["headers"][id[1]][3]][choice]);
         }
         else
         {
@@ -396,5 +429,10 @@ function EditableTable(opts)
             $('#invalidWarning').show('slow');
             $('#submitRatings').show().prop('disabled',true);
         }
+    }
+
+    this.addDropDown = function(dropDown, name)
+    {
+        options["dropDowns"][name] = dropDown;
     }
 }
